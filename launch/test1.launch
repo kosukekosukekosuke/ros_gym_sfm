@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="hz" default="50" /> 
+
+    <!-- param -->
+    <param name="HZ" value="$(arg hz)" />
+    <rosparam file="$(find ros_gym_sfm)/config/sim_param.yaml" />
+
+    <!-- run node -->
+    <node name="sim" pkg="ros_gym_sfm" type="sim.py" output="screen" />
+   
+</launch>
