@@ -45,8 +45,8 @@ cdef class Agent():
         # self.pose = np.array([2.0, 1.0], dtype=np.float64)/self.scale
         self.target = np.array(init_pose[1], dtype=np.float64)/self.scale
         # self.target = np.array([2.0, 4.0], dtype=np.float64)/self.scale
-        self.yaw = init_pose[2] + 0.25*random.uniform(-math.pi, math.pi)
-        # self.yaw = init_pose[2]
+        self.yaw = init_pose[2]
+        # self.yaw = init_pose[2] + 0.25*random.uniform(-math.pi, math.pi)
         self.v = check_bound(conf['v'], self.max_v, self.min_v) # linear v
         self.omega = check_bound(conf['omega'], self.max_omega, -self.max_omega) # angle v
         self.action_space = spaces.Box(np.array([self.min_v, -self.max_omega]), np.array([self.max_v, self.max_omega]), dtype=np.float64)

@@ -23,18 +23,20 @@ class RosGymSfm:
 
         self.env = gym.make('gym_sfm-v0', md = self.MAP, tl = self.TIME_LIMIT)
 
-        self.lidar = LaserScan()                 # scan data
-        self.actor_pose = Float32MultiArray()    # actor pose
-        self.actor_name= Int32MultiArray()       # actor name
-        self.actor_num = Byte()                  # actor number
-        self.agent = two_dimensional_position()  # agent pose
+        self.lidar = LaserScan()                      # scan data
+        self.actor_pose = Float32MultiArray()         # actor pose
+        self.actor_name= Int32MultiArray()            # actor name
+        self.actor_num = Byte()                       # actor total number
+        self.agent_pose = two_dimensional_position()  # agent pose
+        self.agent_goal = two_dimensional_position()  # agent goal
 
         #publisher
-        self.lidar_pub = rospy.Publisher("ros_gym_sfm/scan", LaserScan, queue_size=10)                     #DWAで使用する
+        self.lidar_pub = rospy.Publisher("ros_gym_sfm/scan", LaserScan, queue_size=10)                           #DWAで使用する
         self.actor_pose_pub = rospy.Publisher("ros_gym_sfm/actor_pose", Float32MultiArray, queue_size=10)
         self.actor_name_pub = rospy.Publisher("ros_gym_sfm/actor_name", Int32MultiArray, queue_size=10)
         self.actor_num_pub = rospy.Publisher("ros_gym_sfm/actor_num", Byte, queue_size=10)
-        self.agent_pub = rospy.Publisher("ros_gym_sfm/agent_pose", two_dimensional_position, queue_size=10)
+        self.agent_pose_pub = rospy.Publisher("ros_gym_sfm/agent_pose", two_dimensional_position, queue_size=10)
+        self.agent_goal_pub = rospy.Publisher("ros_gym_sfm/agent_goal", two_dimensional_position, queue_size=10)
 
         #subscriber debug
         # rospy.Subscriber("ros_gym_sfm/scan", LaserScan, self.callback_debug)
@@ -42,6 +44,7 @@ class RosGymSfm:
         # rospy.Subscriber("ros_gym_sfm/actor_name", Int32MultiArray, self.callback_debug)
         # rospy.Subscriber("ros_gym_sfm/actor_num", Byte, self.callback_debug)
         # rospy.Subscriber("ros_gym_sfm/agent_pose", two_dimensional_position, self.callback_debug)
+        # rospy.Subscriber("ros_gym_sfm/agent_goal", two_dimensional_position, self.callback_debug)
 
     def callback_debug(self, debug):
         rospy.loginfo(debug)
@@ -54,7 +57,7 @@ class RosGymSfm:
         while not rospy.is_shutdown():
             action = np.array([0, 0], dtype=np.float64)
             
-            observation, people_name, people_pose, agent, reward, done, _ = self.env.step(action)
+            observation, people_name, people_pose, total_actor_num, agent, reward, done, _ = self.env.step(action)
 
             # if len(people_name) == 0:
             #     print("no scan")
@@ -76,14 +79,19 @@ class RosGymSfm:
                     self.actor_name.data = self.actor_name_box
             self.actor_name_pub.publish(self.actor_name)
 
-            # actor number publish
-            self.actor_num.data =len(people_name)
+            # actor total number publish
+            self.actor_num.data = total_actor_num
             self.actor_num_pub.publish(self.actor_num)
 
             # agent pose publish
-            self.agent.x = agent.pose[0]
-            self.agent.y = agent.pose[1]
-            self.agent_pub.publish(self.agent)
+            self.agent_pose.x = agent.pose[0]
+            self.agent_pose.y = agent.pose[1]
+            self.agent_pose_pub.publish(self.agent_pose)
+        
+            # agent goal publish
+            self.agent_goal.x = agent.target[0]
+            self.agent_goal.y = agent.target[1]
+            self.agent_goal_pub.publish(self.agent_goal)
             
             self.env.render()
 

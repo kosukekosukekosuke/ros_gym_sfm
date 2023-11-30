@@ -4,6 +4,9 @@ size:
   scale: 0.5
 
 zones:
+#以下を変更する場合，
+#zone.pyxのthe_generate_ag_zoneとspecified_range_generate_ac_zoneも変える
+#（ハードコーディングのため）
   - name: zone1
     pose: [7.5,2.5]
     shape: [1,0]

@@ -19,7 +19,7 @@ from gym_sfm.envs.world import World, Collision
 from gym_sfm.envs.cython.wall import Wall, make_wall
 from gym_sfm.envs.cython.actor import Actor, make_actor_random
 from gym_sfm.envs.cython.agent import Agent, make_agent_random
-from gym_sfm.envs.cython.zone import Zone, make_zone, select_generate_ac_zone, select_generate_ag_zone, check_zone_target_existence
+from gym_sfm.envs.cython.zone import Zone, make_zone, select_generate_ac_zone, specified_range_generate_ac_zone, select_generate_ag_zone, the_generate_ag_zone, check_zone_target_existence
 
 def check_name_duplicate(obj):
     name_list = [ o['name'] for o in obj ]
@@ -137,7 +137,7 @@ class GymSFM(gym.Env):
         if 'actor' in self.actor_conf :
             stop_generate_actor = False
             while self.actor_num < self.max_actor_num and not stop_generate_actor :
-                can_generate_actor = select_generate_ac_zone(self.zones, self.total_step, self.agent.pose) # [start, target, target_zone]
+                can_generate_actor = specified_range_generate_ac_zone(self.zones, self.total_step, self.agent.pose) # [start, target, target_zone]
                 if can_generate_actor :
                     actor = make_actor_random(
                         self.actor_conf['actor'], can_generate_actor,
@@ -274,7 +274,7 @@ class GymSFM(gym.Env):
                 self.actors.remove(a)
                 self.actor_num -= 1
             if self.actor_num < self.max_actor_num :
-                can_generate_actor = select_generate_ac_zone(self.zones, self.total_step, self.agent.pose) # [start, target, target_zone]
+                can_generate_actor = specified_range_generate_ac_zone(self.zones, self.total_step, self.agent.pose) # [start, target, target_zone]
                 if can_generate_actor :
                     actor = make_actor_random(
                         self.actor_conf['actor'], can_generate_actor,
@@ -305,7 +305,7 @@ class GymSFM(gym.Env):
         
         can_people_name, can_people_pose = self.calc_can_obs_human(self.agent, self.actors, obs)
 
-        return obs, can_people_name, can_people_pose, self.agent, reward, state, {'total_step':self.total_step}
+        return obs, can_people_name, can_people_pose, self.total_actor_num, self.agent, reward, state, {'total_step':self.total_step}
 
     def get_reward(self, state, dis, angle, ddis, v, omega):
         reward = 0
@@ -337,7 +337,7 @@ class GymSFM(gym.Env):
 
     def make_agent(self, agent_file):
         self.agent_conf = get_config(PARDIR+'/config/agent/'+agent_file)
-        can_generate_agent = select_generate_ag_zone(self.zones, self.total_step) # [start, target]
+        can_generate_agent = the_generate_ag_zone(self.zones, self.total_step) # [start, target]
         if can_generate_agent and self.total_agent_num < self.max_agent_num :
             self.agent = make_agent_random(self.agent_conf['agent'], can_generate_agent, [self.dt, self.map_scale, 'agent'+str(self.total_agent_num)], self.world)
             self.total_agent_num += 1

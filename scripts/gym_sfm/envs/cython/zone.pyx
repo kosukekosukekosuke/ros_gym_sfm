@@ -189,6 +189,23 @@ cpdef list select_generate_ac_zone(list zones, int total_step, np.ndarray ag_pos
     else : target_zone = get_zone(zones, start_zone.target_zone_name)
     return [start_zone.generate_actor_pose(), target_zone.generate_actor_pose(), target_zone]
 
+cpdef list specified_range_generate_ac_zone(list zones, int total_step, np.ndarray ag_pose):
+    cdef :
+        int sz_i = 0
+        list az_index = [0, 1, 2, 3, 4, 5]  # available zone index
+        list atz_index = [0, 1, 2, 3, 4, 5] # available target zone index
+        object start_zone = None
+        object target_zone = None
+    sz_i = random.choice(az_index)
+    atz_index.remove(sz_i)
+    start_zone = zones[sz_i]
+    start_zone.can_generate_actor = False
+    start_zone.can_generate_agent = False
+    start_zone.generated_step = total_step
+    if start_zone.target_zone_name == 'any' : target_zone = zones[random.choice(atz_index)]
+    else : target_zone = get_zone(zones, start_zone.target_zone_name)
+    return [start_zone.generate_actor_pose(), target_zone.generate_actor_pose(), target_zone]
+
 cpdef list select_generate_ag_zone(list zones, int total_step):
     cdef :
         int i = 0
@@ -211,6 +228,15 @@ cpdef list select_generate_ag_zone(list zones, int total_step):
     start_zone.can_generate_agent = False
     start_zone.generated_step = total_step
     if start_zone.target_zone_name == 'any' : target_zone = zones[random.choice(atz_index)]
+    else : target_zone = get_zone(zones, start_zone.target_zone_name)
+    return [start_zone.generate_actor_pose(), target_zone.generate_actor_pose(), start_zone.base_yaw]
+
+cpdef list the_generate_ag_zone(list zones, int total_step):
+    start_zone = zones[6]
+    start_zone.can_generate_actor = False
+    start_zone.can_generate_agent = False
+    start_zone.generated_step = total_step
+    if start_zone.target_zone_name == 'any' : target_zone = zones[7]
     else : target_zone = get_zone(zones, start_zone.target_zone_name)
     return [start_zone.generate_actor_pose(), target_zone.generate_actor_pose(), start_zone.base_yaw]
 
