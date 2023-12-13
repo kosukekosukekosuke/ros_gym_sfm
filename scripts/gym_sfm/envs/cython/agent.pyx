@@ -17,7 +17,7 @@ ctypedef np.float64_t DTYPE_t
 @cython.final
 cdef class Agent():
     cdef public:
-        double lidar_linear_range, lidar_rad_range, lidar_rad_step
+        double lidar_linear_range, lidar_rad_range, lidar_rad_step, time_increment, scan_time
         double yaw, v, omega, dis, angle_to_goal, radius
         list lidar, lidar_point
         np.ndarray pose, target, color
@@ -38,6 +38,8 @@ cdef class Agent():
         self.lidar_linear_range = conf['lidar_linear_range'] # [m]
         self.lidar_rad_range = conf['lidar_rad_range']*math.pi/180  # deg -> rad
         self.lidar_rad_step = conf['lidar_rad_step']*math.pi/180    # deg -> rad
+        self.time_increment = conf['time_increment']    
+        self.scan_time = conf['scan_time']
         self.radius = conf['radius'] # [m]
         self.lidar_point = []
 

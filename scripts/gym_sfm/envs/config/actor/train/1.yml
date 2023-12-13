@@ -1,7 +1,8 @@
 actor:
   # init
   yaw: 0.0
-  optimal_v: 1.5
+  optimal_v: 0.6
+  # optimal_v: 1.5
   # restriction
   max_v: 5.0 # あるが使わない
   max_a: 2.0

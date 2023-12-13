@@ -13,5 +13,7 @@ agent:
   radius: 0.25              # [m]
   lidar_linear_range: 10.0  # [m]
   # lidar_linear_range: 30.0  # [m]  # default
-  lidar_rad_range: 180    # [deg]
+  lidar_rad_range: 180.0    # [deg] 
   lidar_rad_step: 3.0       # [deg]
+  time_increment: 1.7361    # [sec]  # time interval of acquired points 
+  scan_time: 0.02500        # [sec]  # time taken to acquire all point clouds
