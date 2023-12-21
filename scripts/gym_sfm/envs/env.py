@@ -39,7 +39,7 @@ class GymSFM(gym.Env):
 
     def __init__(self, md, tl, agf='env_default'):
         super(GymSFM, self).__init__()
-        self.fps = 50
+        self.fps = 25
         self.dt = 1.0/self.fps
         self.suspend_limit = self.fps/2
         self.total_step = 0
@@ -150,7 +150,7 @@ class GymSFM(gym.Env):
         else : raise RuntimeError('---------- Actor element is required ----------')
         if 'viewer' in self.actor_conf : self.actor_view_conf = self.actor_conf['viewer']
 
-        can_people_name, can_people_pose = self.calc_can_obs_human(self.agent, self.actors, obs)
+        can_people_name, can_people_pose, can_people_yaw = self.calc_can_obs_human(self.agent, self.actors, obs)
 
         self.agent_base_pose = self.agent.pose #if agent is single.
 
@@ -168,7 +168,8 @@ class GymSFM(gym.Env):
         # each_ag_obs_people = []
         for human_obs_range in human_obs_ranges:
             one_detect_people_name = [] * self.max_actor_num
-            one_detect_people_pose = [] * self.max_actor_num
+            one_detect_people_pose = [] * self.max_actor_num * 2
+            one_detect_people_yaw = [] * self.max_actor_num
             # print(len(one_detect_people))
             # one_ag_obs_people = np.zeros(self.max_actor_num*5)
             # i = 0
@@ -221,6 +222,8 @@ class GymSFM(gym.Env):
                                 # one_detect_people_pose.append(actor.pose)
                                 one_detect_people_pose.extend(actor.pose)
 
+                                one_detect_people_yaw.append(actor.yaw)
+
                                 # one_ag_obs_people[i:i+5] = save_pose_vw
                                                                 
                                 # if actor.name not in self.n :
@@ -236,7 +239,7 @@ class GymSFM(gym.Env):
                         if search_human is not True:
                             break
                     
-        return one_detect_people_name, one_detect_people_pose            
+        return one_detect_people_name, one_detect_people_pose, one_detect_people_yaw 
             # each_ag_obs_people.append(one_detect_people)
         # return each_ag_obs_people
 
@@ -303,9 +306,13 @@ class GymSFM(gym.Env):
         self.total_step += 1
         # print(self.total_step)
         
-        can_people_name, can_people_pose = self.calc_can_obs_human(self.agent, self.actors, obs)
+        can_people_name, can_people_pose, can_people_yaw = self.calc_can_obs_human(self.agent, self.actors, obs)
 
-        return obs, can_people_name, can_people_pose, self.total_actor_num, self.agent, reward, state, {'total_step':self.total_step}
+        all_actors_pose = [] * self.max_actor_num * 2
+        for actor in self.actors:
+            all_actors_pose.extend(actor.pose)
+
+        return obs, can_people_name, can_people_pose, all_actors_pose, self.agent, reward, state, {'total_step':self.total_step}
 
     def get_reward(self, state, dis, angle, ddis, v, omega):
         reward = 0

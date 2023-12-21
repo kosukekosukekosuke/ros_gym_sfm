@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-    <arg name="hz" default="25" /> 
+    <arg name="hz" default="20" /> 
     <arg name="rviz_settings_1" default="$(find ros_gym_sfm)/config/rviz/ros_gym_sfm.rviz"/>
     <!-- <arg name="rviz_settings_2" default="$(find ros_gym_sfm)/config/rviz/localmap_test.rviz"/> -->
     <arg name="rviz_settings_3" default="$(find ros_gym_sfm)/config/rviz/dwa_test.rviz"/>
@@ -10,7 +10,10 @@
     <param name="HZ" value="$(arg hz)" />
     <rosparam file="$(find ros_gym_sfm)/config/param/sim_param.yaml" />
     <rosparam file="$(find ros_gym_sfm)/scripts/gym_sfm/envs/config/agent/default.yml" />
+    <rosparam file="$(find ros_gym_sfm)/scripts/gym_sfm/envs/config/actor/train/1.yml" />
     <rosparam file="$(find local_goal_creator)/config/param/local_goal_creator.yaml" />
+    <rosparam file="$(find dwa_planner)/config/dwa_param.yaml" />
+    <!-- <rosparam file="$(find moving_obs_predictor)/config/param/constant_velocity_predictor.yaml" /> -->
 
     <!-- rviz -->
     <node pkg="rviz" type="rviz" name="rviz1" args="-d $(arg rviz_settings_1)"/>
@@ -20,9 +23,9 @@
     <!-- run node -->
     <node name="sim" pkg="ros_gym_sfm" type="sim.py" output="screen" />
     <node name="local_goal_creator" pkg="local_goal_creator" type="local_goal_creator.py" output="screen" />
-    <include file="$(find localmap_creator)/launch/localmap_creator_kimi.launch" />
+    <node name="constant_velocity_predictor" pkg="moving_obs_predictor" type="constant_velocity_predictor.py" output="screen" />
     <include file="$(find dwa_planner)/launch/local_planner.launch" />
-    <!-- <include file="$(env HOME)/catkin_ws/src/dwa_planner/launch/local_planner.launch" /> -->
+    <include file="$(find localmap_creator)/launch/localmap_creator_kimi.launch" />
 
     <!-- static tf -->
     <node pkg="tf2_ros" type="static_transform_publisher" name="static_transform_publisher" args="0 0 0 0 0 0 1 /base_link /laser"/>

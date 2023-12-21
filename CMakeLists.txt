@@ -10,6 +10,7 @@ project(ros_gym_sfm)
 find_package(catkin REQUIRED COMPONENTS
     rospy
     std_msgs
+    visualization_msgs
     message_generation
 )
 
@@ -50,7 +51,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  two_dimensional_position.msg
+  TwoDimensionalPosition.msg
+  Actor.msg
+  PredictedActor.msg
 #   Message1.msg
 #   Message2.msg
 )
@@ -73,6 +76,7 @@ add_message_files(
 generate_messages(
    DEPENDENCIES
    std_msgs  # Or other packages containing msgs
+   visualization_msgs
 )
 
 ################################################
@@ -107,7 +111,7 @@ generate_messages(
 catkin_package(
 # INCLUDE_DIRS include
 # LIBRARIES ros_gym_sfm
-#  CATKIN_DEPENDS other_catkin_pkg
+  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 

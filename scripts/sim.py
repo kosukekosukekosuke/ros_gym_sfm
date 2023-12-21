@@ -8,16 +8,17 @@ import random
 import traceback
 import argparse
 import re
+import copy
 import gym
 import gym_sfm.envs.env
 import rospy
 import tf_conversions
 import tf2_ros
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Float32MultiArray, Int32MultiArray, Byte
-from geometry_msgs.msg import PoseStamped, TransformStamped, Twist
+from geometry_msgs.msg import PoseStamped, TransformStamped, Point, Twist
 from nav_msgs.msg import Odometry
-# from ros_gym_sfm.msg import two_dimensional_position
+from visualization_msgs.msg import Marker
+from ros_gym_sfm.msg import Actor
 
 class RosGymSfm:
     def __init__(self):
@@ -25,35 +26,24 @@ class RosGymSfm:
         self.HZ = rospy.get_param("/HZ")
         self.MAP = rospy.get_param("/MAP")
         self.TIME_LIMIT = rospy.get_param("/TIME_LIMIT")
+        self.radius = rospy.get_param("/actor/radius")
 
         # make environment
         self.env = gym.make('gym_sfm-v0', md = self.MAP, tl = self.TIME_LIMIT)
 
         # create instance
-        self.laser = LaserScan()               # scan data
-        self.actor_pose = Float32MultiArray()  # actor pose
-        self.actor_name= Int32MultiArray()     # actor name
-        self.actor_num = Byte()                # actor total number
-        self.agent_pose = PoseStamped()        # agent pose
-        self.agent_goal = PoseStamped()        # agent goal
-        self.agent_cmd_vel = Odometry()        # agent command velocity
+        self.agent_cmd_vel = Odometry()  # agent command velocity
 
         # publisher
-        self.laser_pub = rospy.Publisher("ros_gym_sfm/scan", LaserScan, queue_size=10)  #used fot DWA
-        self.actor_pose_pub = rospy.Publisher("ros_gym_sfm/actor_pose", Float32MultiArray, queue_size=10)
-        self.actor_name_pub = rospy.Publisher("ros_gym_sfm/actor_name", Int32MultiArray, queue_size=10)
-        self.actor_num_pub = rospy.Publisher("ros_gym_sfm/actor_num", Byte, queue_size=10)
-        self.agent_pose_pub = rospy.Publisher("ros_gym_sfm/agent_pose", PoseStamped, queue_size=10)
-        self.agent_goal_pub = rospy.Publisher("ros_gym_sfm/agent_goal", PoseStamped, queue_size=10)
-        self.agent_odom_pub = rospy.Publisher("ros_gym_sfm/odom", Odometry, queue_size=10)
+        self.laser_pub = rospy.Publisher("ros_gym_sfm/scan", LaserScan, queue_size=1)  # used for debug
+        self.agent_pose_pub = rospy.Publisher("ros_gym_sfm/agent_pose", PoseStamped, queue_size=1)
+        self.agent_goal_pub = rospy.Publisher("ros_gym_sfm/agent_goal", PoseStamped, queue_size=1)
+        self.actor_pub = rospy.Publisher("ros_gym_sfm/actor_info", Actor, queue_size=1)
+        self.all_actor_pub = rospy.Publisher("ros_gym_sfm/all_actor", Marker, queue_size=1)  # used for debug
+        self.agent_odom_pub = rospy.Publisher("ros_gym_sfm/odom", Odometry, queue_size=1)
 
         # subscriber
         # rospy.Subscriber("ros_gym_sfm/scan", LaserScan, self.callback_debug)
-        # rospy.Subscriber("ros_gym_sfm/actor_pose", Float32MultiArray, self.callback_debug)
-        # rospy.Subscriber("ros_gym_sfm/actor_name", Int32MultiArray, self.callback_debug)
-        # rospy.Subscriber("ros_gym_sfm/actor_num", Byte, self.callback_debug)
-        # rospy.Subscriber("ros_gym_sfm/agent_pose", PoseStamped, self.callback_debug)
-        # rospy.Subscriber("ros_gym_sfm/agent_goal", PoseStamped, self.callback_debug)
         rospy.Subscriber("/local_path/cmd_vel", Twist, self.agent_cmd_vel_callback)
 
     # callback
@@ -85,11 +75,12 @@ class RosGymSfm:
         self.rate = rospy.Rate(self.HZ)
         observation = self.env.reset()
         done = False
+        goal_pub_flag = False
 
         while not rospy.is_shutdown():
             action = np.array([self.agent_cmd_vel.twist.twist.linear.x, self.agent_cmd_vel.twist.twist.angular.z], dtype=np.float64)
             
-            observation, people_name, people_pose, total_actor_num, agent, reward, done, _ = self.env.step(action)
+            observation, people_name, people_pose, all_people_pose, agent, reward, done, _ = self.env.step(action)
 
             # make agent tf
             try:
@@ -98,68 +89,102 @@ class RosGymSfm:
                 self.rate.sleep()
                 continue
 
-            # frame_id & time_stamp
-            self.laser.header.frame_id = "laser"
-            self.laser.header.stamp = rospy.Time.now()
-            self.agent_pose.header.frame_id = "map"
-            self.agent_pose.header.stamp = rospy.Time.now()
-            self.agent_goal.header.frame_id = "map"
-            self.agent_goal.header.stamp = rospy.Time.now()
-
-            # scan data publish
+            # publish scan data 
+            laser = LaserScan()     
+            laser.header.frame_id = "laser"
+            laser.header.stamp = rospy.Time.now()
             original_obs = self.env.resize_observation(observation)
-            self.laser.ranges = original_obs
+            laser.ranges = original_obs
                 # delete goal info
-            laser_list = list(self.laser.ranges)   
+            laser_list = list(laser.ranges)   
             del laser_list[-2:]                   
-            self.laser.ranges = tuple(laser_list)  
+            laser.ranges = tuple(laser_list)  
                 # determine laser info
-            self.laser.angle_min = - agent.lidar_rad_range/2.0     # lower limit angle [rad]
-            self.laser.angle_max = agent.lidar_rad_range/2.0       # upper limit angle [rad]
-            self.laser.angle_increment = agent.lidar_rad_step      # tuning angle [rad]
-            self.laser.time_increment = agent.time_increment       # time interval of acquired points [sec]
-            self.laser.scan_time = agent.scan_time                 # time taken to acquire all point clouds [sec]
-            self.laser.range_max = agent.lidar_linear_range        # maximum distance [m]
-            self.laser.range_min = agent.lidar_linear_range/100.0  # minimum distance [m]     
-            self.laser_pub.publish(self.laser)
+            laser.angle_min = - agent.lidar_rad_range/2.0     # lower limit angle [rad]
+            laser.angle_max = agent.lidar_rad_range/2.0       # upper limit angle [rad]
+            laser.angle_increment = agent.lidar_rad_step      # tuning angle [rad]
+            laser.time_increment = agent.time_increment       # time interval of acquired points [sec]
+            laser.scan_time = agent.scan_time                 # time taken to acquire all point clouds [sec]
+            laser.range_max = agent.lidar_linear_range        # maximum distance [m]
+            laser.range_min = agent.lidar_linear_range/100.0  # minimum distance [m]     
+            self.laser_pub.publish(laser)
 
-            # actor pose publish
-            self.actor_pose.data = people_pose
-            self.actor_pose_pub.publish(self.actor_pose)
-
-            # actor name publish
-            self.actor_name_box = [] * len(people_name)
-            for i in range(len(people_name)):
-                self.actor_name_box.append(int(re.sub(r"\D", "", people_name[i])))
-                if i == len(people_name)-1:
-                    self.actor_name.data = self.actor_name_box
-            self.actor_name_pub.publish(self.actor_name)
-
-            # actor total number publish
-            self.actor_num.data = total_actor_num
-            self.actor_num_pub.publish(self.actor_num)
-
-            # agent pose publish
-            self.agent_pose.pose.position.x = agent.pose[0]
-            self.agent_pose.pose.position.y = agent.pose[1]
+            # publish agent pose 
+            agent_pose = PoseStamped()
+            agent_pose.header.frame_id = "map"
+            agent_pose.header.stamp = rospy.Time.now()
+            agent_pose.pose.position.x = agent.pose[0]
+            agent_pose.pose.position.y = agent.pose[1]
             agent_pose_q = tf_conversions.transformations.quaternion_from_euler(0, 0, agent.yaw)
-            self.agent_pose.pose.orientation.x = agent_pose_q[0]
-            self.agent_pose.pose.orientation.y = agent_pose_q[1]
-            self.agent_pose.pose.orientation.z = agent_pose_q[2]
-            self.agent_pose.pose.orientation.w = agent_pose_q[3]
-            self.agent_pose_pub.publish(self.agent_pose)
+            agent_pose.pose.orientation.x = agent_pose_q[0]
+            agent_pose.pose.orientation.y = agent_pose_q[1]
+            agent_pose.pose.orientation.z = agent_pose_q[2]
+            agent_pose.pose.orientation.w = agent_pose_q[3]
+            self.agent_pose_pub.publish(agent_pose)
         
-            # agent goal publish
-            self.agent_goal.pose.position.x = agent.target[0]
-            self.agent_goal.pose.position.y = agent.target[1]
-            agent_goal_q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.pi/2)
-            self.agent_goal.pose.orientation.x = agent_goal_q[0]
-            self.agent_goal.pose.orientation.y = agent_goal_q[1]
-            self.agent_goal.pose.orientation.z = agent_goal_q[2]
-            self.agent_goal.pose.orientation.w = agent_goal_q[3]
-            self.agent_goal_pub.publish(self.agent_goal)
-            
-            # agent odometry publish
+            # publish agent goal 
+            if goal_pub_flag == False:
+                agent_goal = PoseStamped() 
+                agent_goal.pose.position.x = agent.target[0]
+                agent_goal.pose.position.y = agent.target[1]
+                agent_goal_q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.pi/2)
+                agent_goal.pose.orientation.x = agent_goal_q[0]
+                agent_goal.pose.orientation.y = agent_goal_q[1]
+                agent_goal.pose.orientation.z = agent_goal_q[2]
+                agent_goal.pose.orientation.w = agent_goal_q[3]
+                goal_pub_flag = True
+            agent_goal.header.frame_id = "map"
+            agent_goal.header.stamp = rospy.Time.now()
+            self.agent_goal_pub.publish(agent_goal)
+
+            # publish actor pose and name 
+            actor = Actor()
+            actor.header.frame_id = "map"
+            actor.header.stamp = rospy.Time.now()
+                # actor pose
+            actor_pose_i = Point()
+            people_num = int(len(people_pose)/2)
+            for i in range(people_num):
+                actor_pose_i.x = people_pose[i*2]
+                actor_pose_i.y = people_pose[i*2+1]
+                actor.pose.points.append(copy.copy(actor_pose_i))
+                # actor name
+            actor_name_box = [] * len(people_name)
+            for i in range(len(people_name)):
+                actor_name_box.append(int(re.sub(r"\D", "", people_name[i])))
+                if i == len(people_name)-1:
+                    actor.name.data = actor_name_box         
+            self.actor_pub.publish(actor)
+
+            # publish actor pose for debug for debugging by visualization  
+            all_actor = Marker()
+            all_actor.header.frame_id = "map"
+            all_actor.header.stamp = rospy.Time.now()
+            all_actor.color.r = 0
+            all_actor.color.g = 1
+            all_actor.color.b = 1
+            all_actor.color.a = 0.8
+            all_actor.ns = "ros_gym_sfm/all_actor"
+            all_actor.id = 0
+            all_actor.type = Marker.SPHERE_LIST
+            all_actor.action = Marker.ADD
+            all_actor.lifetime = rospy.Duration()
+            all_actor.scale.x = self.radius
+            all_actor.scale.y = self.radius
+            all_actor.scale.z = self.radius
+            pose = PoseStamped()
+            pose.pose.orientation.w = 1
+            all_actor.pose = pose.pose
+            p = Point()
+            all_people_num = int(len(all_people_pose) / 2)
+            for i in range(all_people_num):
+                p.x = all_people_pose[i*2]
+                p.y = all_people_pose[i*2+1]
+                all_actor.points.append(copy.copy(p))
+            if len(all_actor.points) > 0:
+                self.all_actor_pub.publish(all_actor)
+
+            # publish agent odometry 
             self.agent_odom_pub.publish(self.agent_cmd_vel)
 
             self.env.render()
