@@ -192,8 +192,8 @@ cpdef list select_generate_ac_zone(list zones, int total_step, np.ndarray ag_pos
 cpdef list specified_range_generate_ac_zone(list zones, int total_step, np.ndarray ag_pose):
     cdef :
         int sz_i = 0
-        list az_index = [0, 5]  # available zone index
-        list atz_index = [0, 5] # available target zone index
+        list az_index = [0, 1, 2, 3, 4, 5]  # available zone index
+        list atz_index = [0, 1, 2, 3, 4, 5] # available target zone index
         object start_zone = None
         object target_zone = None
     sz_i = random.choice(az_index)
