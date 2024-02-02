@@ -1,0 +1,10 @@
+file path,Success Rate,Average Goal Time,Standard Deviation
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_new_1_1.csv,0.99,40.32399779618388,6.278694049424276
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_old_1_1.csv,0.85,38.813626460468065,2.1595857462458277
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_new_5_1.csv,0.74,45.35883057439649,6.390803154714531
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_old_5_1.csv,0.49,41.80152078550689,4.82078443233507
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_new_10_1.csv,0.6,51.60544217824936,9.1992542849895362
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_old_10_1.csv,0.4,47.00040975213051,8.60294472300332
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_new_15_1.csv,0.31,59.00740855739963,8.848482277376284
+/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/sample_old_15_1.csv,0.08,54.31459131836891,5.990664252125194
+

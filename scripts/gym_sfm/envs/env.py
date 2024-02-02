@@ -57,6 +57,9 @@ class GymSFM(gym.Env):
         self.observation_space = self.reset()
         self.action_space = self.agent.action_space
 
+        self.goal_flag = False
+        self.collision_flag = False
+
     def _destroy(self):
         self.world._destroy()
         self.walls = []
@@ -312,7 +315,7 @@ class GymSFM(gym.Env):
         for actor in self.actors:
             all_actors_pose.extend(actor.pose)
 
-        return obs, can_people_name, can_people_pose, all_actors_pose, self.agent, reward, state, {'total_step':self.total_step}
+        return obs, can_people_name, can_people_pose, all_actors_pose, self.agent, self.goal_flag, self.collision_flag, reward, state, {'total_step':self.total_step}
 
     def get_reward(self, state, dis, angle, ddis, v, omega):
         reward = 0
@@ -320,6 +323,7 @@ class GymSFM(gym.Env):
             reward = -0.01 if v < 1e-3 else ddis
         elif state == 1 :
             print('--- Goal. ---')
+            self.goal_flag = True
             reward += 5
         elif state == 2 :
             print('--- Out of map. ---')
@@ -329,6 +333,7 @@ class GymSFM(gym.Env):
             reward += ddis
         elif state == 4 :
             print('--- Collition. ---')
+            self.collision_flag = True
             reward += -5
         return reward
 

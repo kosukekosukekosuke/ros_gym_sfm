@@ -11,7 +11,9 @@ import re
 import copy
 import gym
 import gym_sfm.envs.env
+import csv
 import rospy
+import rosnode
 import tf_conversions
 import tf2_ros
 from sensor_msgs.msg import LaserScan
@@ -27,6 +29,14 @@ class RosGymSfm:
         self.MAP = rospy.get_param("/MAP")
         self.TIME_LIMIT = rospy.get_param("/TIME_LIMIT")
         self.radius = rospy.get_param("/actor/radius")
+        self.NODE_NAME = rospy.get_param("/NODE_NAME")
+        self.RECORD_QUANTITATIVE_DATA = rospy.get_param("/RECORD_QUANTITATIVE_DATA")
+        self.RECORD_AGENT_TRAJECTORY = rospy.get_param("/RECORD_AGENT_TRAJECTORY")
+        self.RECORD_ACTOR_TRAJECTORY = rospy.get_param("/RECORD_ACTOR_TRAJECTORY")
+        self.EXPERIMENTAL_DERECTORY = rospy.get_param("/EXPERIMENTAL_DERECTORY")
+        self.FILE_NAME_1 = rospy.get_param("/FILE_NAME_1")
+        self.FILE_NAME_2_1 = rospy.get_param("/FILE_NAME_2_1")
+        self.FILE_NAME_2_2 = rospy.get_param("/FILE_NAME_2_2")
 
         # make environment
         self.env = gym.make('gym_sfm-v0', md = self.MAP, tl = self.TIME_LIMIT)
@@ -76,11 +86,13 @@ class RosGymSfm:
         observation = self.env.reset()
         done = False
         goal_pub_flag = False
+        start_time = rospy.get_time()
+        stop_timer = False
 
         while not rospy.is_shutdown():
             action = np.array([self.agent_cmd_vel.twist.twist.linear.x, self.agent_cmd_vel.twist.twist.angular.z], dtype=np.float64)
             
-            observation, people_name, people_pose, all_people_pose, agent, reward, done, _ = self.env.step(action)
+            observation, people_name, people_pose, all_people_pose, agent, goal_flag, collision_flag, reward, done, _ = self.env.step(action)
 
             # make agent tf
             try:
@@ -187,9 +199,97 @@ class RosGymSfm:
             # publish agent odometry 
             self.agent_odom_pub.publish(self.agent_cmd_vel)
 
+            # record data, Success judgment, Goal time
+            success_judgment = 0  # binary judgment
+            if goal_flag == True:
+                success_judgment = 1
+                if stop_timer == False:
+                    goal_time = rospy.get_time() - start_time
+                    stop_timer = True
+            else:
+                goal_time = 0
+
+            # record data, agent trajectory
+            if self.RECORD_AGENT_TRAJECTORY == True:
+                header_2_1 = ['Agent trajectory']
+                header_2_2 = ['x', 'y']
+                body_2 = [agent.pose[0], agent.pose[1]]
+                # check if there is a csv file
+                is_file = os.path.isfile("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_1)
+                if is_file:
+                    with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_1, 'a') as f:
+                        writer = csv.writer(f)
+                        writer.writerow(body_2)
+                else:
+                    with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_1, 'w') as f:
+                        writer = csv.writer(f)
+                        # writer.writerow(header_2_1)
+                        # writer.writerow(header_2_2)
+                        writer.writerow(body_2)
+                        
+            # record data, actor trajectory (actor*1)
+            if self.RECORD_ACTOR_TRAJECTORY == True:
+                header_3_1 = ['Actor trajectory']
+                header_3_2 = ['x', 'y']
+                for i in range(all_people_num):
+                    p.x = all_people_pose[i*2]
+                    p.y = all_people_pose[i*2+1]
+                    body_3 = [p.x, p.y]            
+                    # check if there is a csv file
+                    is_file = os.path.isfile("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_2)
+                    if is_file:
+                        with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_2, 'a') as f:
+                            writer = csv.writer(f)
+                            writer.writerow(body_3)
+                    else:
+                        with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_2/" + self.EXPERIMENTAL_DERECTORY + self.FILE_NAME_2_2, 'w') as f:
+                            writer = csv.writer(f)
+                            # writer.writerow(header_3_1)
+                            # writer.writerow(header_3_2)
+                            writer.writerow(body_3)
+
+            # kill all node when the goal is reached
+            if goal_flag == True:
+                rosnode.kill_nodes([self.NODE_NAME])
+
+            # kill all node when there is a collision
+            if collision_flag == True:
+                rosnode.kill_nodes([self.NODE_NAME])
+
             self.env.render()
 
             self.rate.sleep()
+
+        if self.RECORD_QUANTITATIVE_DATA == True:
+            # output results 
+            if goal_flag == True: 
+                print("--------------------")
+                print("Success!!!!! ")
+                print("Success judgment:", success_judgment)
+                print("Goal time", goal_time)
+                print("-------------------- \n")
+            else:
+                print("--------------------")
+                print("Failure..... ")
+                print("Success judgment:", success_judgment)
+                print("-------------------- \n")
+
+            # write data to a file
+            header_1 = ['Success judgment', 'Goal time']
+            body_1 = [success_judgment, goal_time]
+                # check if there is a csv file
+            is_file = os.path.isfile("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/" + self.FILE_NAME_1)
+            if is_file:
+                print(f"'{self.FILE_NAME_1}' exists.")
+                with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/" + self.FILE_NAME_1, 'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(body_1)
+            else:
+                print(f"'{self.FILE_NAME_1}' does not exist.")
+                with open("/home/amsl/catkin_ws/src/ros_gym_sfm/data/experiment_1/" + self.FILE_NAME_1, 'w') as f:
+                    writer = csv.writer(f)
+                    # writer.writerow(header_1)
+                    writer.writerow(body_1)
 
         self.env.close()
 

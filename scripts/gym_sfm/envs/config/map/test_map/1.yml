@@ -47,7 +47,7 @@ viewer:
   show_walls_vertices: false
 actor:
   config_rel_path: train/1.yml
-  max_actor_num: 10
+  max_actor_num: 1
   convergence_radius: 1.0
 agent:
   config_rel_path: default.yml

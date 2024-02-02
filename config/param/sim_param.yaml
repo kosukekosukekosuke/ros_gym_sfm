@@ -1,3 +1,54 @@
-# simulator_param
+# simulator param
+HZ: 20
 MAP: test_map
 TIME_LIMIT: 1800
+
+RECORD_QUANTITATIVE_DATA: False
+RECORD_AGENT_TRAJECTORY: False
+RECORD_ACTOR_TRAJECTORY: False
+
+EXPERIMENTAL_DERECTORY: actor_new_1/
+# EXPERIMENTAL_DERECTORY: actor_old_1/
+# EXPERIMENTAL_DERECTORY: actor_new_5/
+# EXPERIMENTAL_DERECTORY: actor_old_5/
+# EXPERIMENTAL_DERECTORY: actor_new_10/
+# EXPERIMENTAL_DERECTORY: actor_old_10/
+# EXPERIMENTAL_DERECTORY: actor_new_15/
+# EXPERIMENTAL_DERECTORY: actor_old_15/
+
+FILE_NAME_1: sample_new_1_1.csv  
+# FILE_NAME_1: sample_new_5_1.csv  
+# FILE_NAME_1: sample_new_10_1.csv  
+# FILE_NAME_1: sample_new_15_1.csv  
+# FILE_NAME_1: sample_old_1_1.csv  
+# FILE_NAME_1: sample_old_5_1.csv  
+# FILE_NAME_1: sample_old_10_1.csv  
+# FILE_NAME_1: sample_old_15_1.csv  
+
+FILE_NAME_2_1: sample_new_1_2_agent.csv  
+# FILE_NAME_2_1: sample_new_5_2_agent.csv  
+# FILE_NAME_2_1: sample_new_10_2_agent.csv  
+# FILE_NAME_2_1: sample_new_15_2_agent.csv  
+# FILE_NAME_2_1: sample_old_1_2_agent.csv  
+# FILE_NAME_2_1: sample_old_5_2_agent.csv  
+# FILE_NAME_2_1: sample_old_10_2_agent.csv  
+# FILE_NAME_2_1: sample_old_15_2_agent.csv 
+
+FILE_NAME_2_2: sample_new_1_2_actor.csv 
+# FILE_NAME_2_2: sample_new_5_2_actor.csv  
+# FILE_NAME_2_2: sample_new_10_2_actor.csv  
+# FILE_NAME_2_2: sample_new_15_2_actor.csv  
+# FILE_NAME_2_2: sample_old_1_2_actor.csv  
+# FILE_NAME_2_2: sample_old_5_2_actor.csv  
+# FILE_NAME_2_2: sample_old_10_2_actor.csv  
+# FILE_NAME_2_2: sample_old_15_2_actor.csv  
+
+  # proposed method            => new
+  # comparative method         => old
+    # number of moving obstacles => _1, _5, _10, _15
+      # quantitative evaluation    => _1
+      # qualitative evaluation     => _2
+        # agent trajectory         =>   _agent
+        # actor trajectory         =>   _actor
+
+
